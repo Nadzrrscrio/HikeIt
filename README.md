@@ -4,13 +4,13 @@ HikeIt adalah sebuah platform *marketplace* penyewaan peralatan *outdoor* (hikin
 
 ---
 
-### 🌐 Link Akses Aplikasi
+### Link Akses Aplikasi
 Kamu dapat mengakses dan mencoba aplikasi ini secara langsung melalui tautan berikut:
 **[https://hike-it.vercel.app](https://hike-it.vercel.app)**
 
 ---
 
-### 💻 Teknologi yang Digunakan
+### Teknologi yang Digunakan
 Aplikasi ini dikembangkan menggunakan tumpukan teknologi (*tech stack*) modern untuk memastikan performa yang cepat dan antarmuka yang responsif:
 *   **Framework:** Next.js (App Router)
 *   **Bahasa Pemrograman:** TypeScript / JavaScript
@@ -21,7 +21,7 @@ Aplikasi ini dikembangkan menggunakan tumpukan teknologi (*tech stack*) modern u
 
 ---
 
-### 🧪 Pengujian Aplikasi (System Testing)
+### Pengujian Aplikasi (System Testing)
 Pengujian ini dilakukan menggunakan metode *Black Box Testing* berdasarkan skenario *Use Case* (Daily Project 6) untuk memastikan seluruh aspek fungsionalitas berjalan sesuai ekspektasi.
 
 | Modul / Paket | Use Case | Aktor | Skenario Pengujian | Hasil yang Diharapkan | Status |
@@ -43,7 +43,7 @@ Pengujian ini dilakukan menggunakan metode *Black Box Testing* berdasarkan skena
 
 ---
 
-### 🔑 Informasi Login (Testing)
+### Informasi Login (Testing)
 Untuk keperluan pengujian fitur, silakan gunakan kredensial (*dummy account*) di bawah ini:
 
 **Akun Mitra / Penyedia Toko:**
