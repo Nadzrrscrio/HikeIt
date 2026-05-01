@@ -1,6 +1,6 @@
 # HikeIt.
 
-HikeIt adalah sebuah platform *marketplace* penyewaan peralatan *outdoor* (hiking dan camping) yang mempertemukan pendaki dengan toko penyewaan (mitra) di sekitarnya. Aplikasi ini mempermudah pendaki dalam mencari, mem-booking, dan mengelola perlengkapan mendaki, sekaligus membantu mitra dalam mengelola stok, paket bundling, dan pelacakan status sewa secara digital.
+HikeIt adalah sebuah platform *marketplace* penyewaan peralatan *outdoor* (hiking dan camping) yang mempertemukan pendaki dengan toko penyewaan (mitra) di sekitarnya. Aplikasi ini mempermudah pendaki dalam mencari, membooking, dan mengelola perlengkapan mendaki, sekaligus membantu mitra dalam mengelola stok, paket bundling, dan pelacakan status sewa secara digital.
 
 ---
 
@@ -51,5 +51,5 @@ Untuk keperluan pengujian fitur, silakan gunakan kredensial (*dummy account*) di
 *   **Password:** `mitra123`
 
 **Akun Pendaki / Penyewa:**
-*   **Email:** `penyewa@mail.com`
+*   **Email:** `penyewa@gmail.com`
 *   **Password:** `penyewa123`
