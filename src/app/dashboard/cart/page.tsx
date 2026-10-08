@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
@@ -7,27 +7,15 @@ import Link from 'next/link'
 
 export default function CartPage() {
   const [cartItems, setCartItems] = useState<any[]>([])
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [selectedCartIds, setSelectedCartIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
-  const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
-  
-  // STATE UNTUK PROFILE
-  const [profile, setProfile] = useState<any>(null)
 
   // STATE UNTUK MODAL DETAIL ALAT
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [selectedDetail, setSelectedDetail] = useState<any>(null)
 
-  // === STATE UNTUK DUMMY PAYMENT GATEWAY ===
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState('qris')
-
-  // === STATE BARU: CHECKBOX JAMINAN IDENTITAS ===
-  const [isGuaranteeChecked, setIsGuaranteeChecked] = useState(false)
-
-  // === STATE UNTUK MODAL KONFIRMASI HAPUS ===
+  // STATE UNTUK MODAL KONFIRMASI HAPUS
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [cartIdToDelete, setCartIdToDelete] = useState<string | null>(null)
 
@@ -44,27 +32,76 @@ export default function CartPage() {
       router.push('/')
       return
     }
-    setUserId(session.user.id)
-
-    // Fetch data profile agar tidak error saat memanggil profile.full_name
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single()
-    
-    if (profileData) {
-      setProfile(profileData)
-    }
+    const currentUserId = session.user.id
+    setUserId(currentUserId)
 
     const { data } = await supabase
       .from('carts')
       .select('id, item_id, quantity, items(name, description, category, price_per_day, image_url, stock, stores(store_name))')
-      .eq('user_id', session.user.id)
+      .eq('user_id', currentUserId)
       .order('created_at', { ascending: true })
 
-    if (data) setCartItems(data)
+    if (data) {
+      setCartItems(data)
+      
+      // Ambil daftar yang pernah dicentang dari localStorage
+      const storageKey = `selected_cart_ids_${currentUserId}`
+      const savedSelected = localStorage.getItem(storageKey)
+
+      if (savedSelected) {
+        try {
+          const parsed: string[] = JSON.parse(savedSelected)
+          // Validasi agar hanya ID yang masih ada di keranjang yang disimpan
+          const validIds = parsed.filter(id => data.some((item: any) => item.id === id))
+          
+          // Cek apakah ada barang baru yang baru ditambahkan (belum ada catatan di localStorage)
+          // Jika tidak ada di saved, kita tambahkan barang baru tersebut ke list centang
+          const allSavedKnownKey = `all_known_cart_ids_${currentUserId}`
+          const knownIds: string[] = JSON.parse(localStorage.getItem(allSavedKnownKey) || '[]')
+          
+          const newCartItemIds = data.filter((item: any) => !knownIds.includes(item.id)).map((item: any) => item.id)
+          const finalSelectedIds = Array.from(new Set([...validIds, ...newCartItemIds]))
+
+          setSelectedCartIds(finalSelectedIds)
+          localStorage.setItem(storageKey, JSON.stringify(finalSelectedIds))
+          localStorage.setItem(allSavedKnownKey, JSON.stringify(data.map((item: any) => item.id)))
+        } catch (e) {
+          const initialIds = data.map((item: any) => item.id)
+          setSelectedCartIds(initialIds)
+          localStorage.setItem(storageKey, JSON.stringify(initialIds))
+        }
+      } else {
+        // Jika belum pernah diset, centang semua barang secara default
+        const initialIds = data.map((item: any) => item.id)
+        setSelectedCartIds(initialIds)
+        localStorage.setItem(storageKey, JSON.stringify(initialIds))
+        localStorage.setItem(`all_known_cart_ids_${currentUserId}`, JSON.stringify(initialIds))
+      }
+    }
     setLoading(false)
+  }
+
+  const handleToggleSelectAll = () => {
+    let next: string[] = []
+    if (selectedCartIds.length === cartItems.length) {
+      next = []
+    } else {
+      next = cartItems.map(item => item.id)
+    }
+    setSelectedCartIds(next)
+    if (userId) {
+      localStorage.setItem(`selected_cart_ids_${userId}`, JSON.stringify(next))
+    }
+  }
+
+  const handleToggleSelectItem = (id: string) => {
+    setSelectedCartIds(prev => {
+      const next = prev.includes(id) ? prev.filter(itemId => itemId !== id) : [...prev, id]
+      if (userId) {
+        localStorage.setItem(`selected_cart_ids_${userId}`, JSON.stringify(next))
+      }
+      return next
+    })
   }
 
   const handleRemove = (cartId: string) => {
@@ -75,6 +112,13 @@ export default function CartPage() {
   const confirmRemove = async () => {
     if (!cartIdToDelete) return
     setCartItems(prev => prev.filter(item => item.id !== cartIdToDelete))
+    setSelectedCartIds(prev => {
+      const next = prev.filter(id => id !== cartIdToDelete)
+      if (userId) {
+        localStorage.setItem(`selected_cart_ids_${userId}`, JSON.stringify(next))
+      }
+      return next
+    })
     await supabase.from('carts').delete().eq('id', cartIdToDelete)
     setIsDeleteModalOpen(false)
     setCartIdToDelete(null)
@@ -94,54 +138,17 @@ export default function CartPage() {
     setIsDetailModalOpen(true)
   }
 
-  const calculateDays = () => {
-    if (!startDate || !endDate) return 0
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    const diffTime = Math.abs(end.getTime() - start.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays > 0 ? diffDays : 1
-  }
+  // Hitung total harga barang yang dicentang (default hitungan 1 hari)
+  const selectedItems = cartItems.filter(item => selectedCartIds.includes(item.id))
+  const totalPriceDefault1Day = selectedItems.reduce(
+    (total, cart) => total + (cart.items.price_per_day * cart.quantity), 
+    0
+  )
 
-  const totalDays = calculateDays()
-  const totalPricePerDay = cartItems.reduce((total, cart) => total + (cart.items.price_per_day * cart.quantity), 0)
-  const grandTotal = totalPricePerDay * totalDays
-
-  // TRIGGER UNTUK MEMBUKA MODAL PEMBAYARAN
-  const handleOpenPayment = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!userId || cartItems.length === 0) return
-    setIsPaymentModalOpen(true)
-  }
-
-  // FUNGSI EKSEKUSI CHECKOUT (SIMULASI BERHASIL)
-  const executePaymentSuccess = async () => {
-    setCheckoutLoading(true)
-
-    try {
-      const rentalsData = cartItems.map(cartItem => ({
-        tenant_id: userId,
-        item_id: cartItem.item_id,
-        start_date: startDate,
-        end_date: endDate,
-        quantity: cartItem.quantity,
-        total_price: (cartItem.items.price_per_day * cartItem.quantity) * totalDays,
-        status: 'diproses'
-      }))
-
-      const { error: insertError } = await supabase.from('rentals').insert(rentalsData)
-      if (insertError) throw insertError
-
-      await supabase.from('carts').delete().eq('user_id', userId)
-
-      setIsPaymentModalOpen(false)
-      router.push('/dashboard/my-rentals')
-
-    } catch (error: any) {
-      alert("Gagal checkout: " + error.message)
-    } finally {
-      setCheckoutLoading(false)
-    }
+  const handleProceedToCheckout = () => {
+    if (selectedCartIds.length === 0) return
+    sessionStorage.setItem('checkout_cart_ids', JSON.stringify(selectedCartIds))
+    router.push('/dashboard/checkout')
   }
 
   const formatRupiah = (angka: number) => {
@@ -181,25 +188,45 @@ export default function CartPage() {
     )
   }
 
+  const isAllSelected = cartItems.length > 0 && selectedCartIds.length === cartItems.length
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] py-12 px-4 sm:px-6 lg:px-8 font-sans text-gray-100 flex justify-center relative">
-      <div className="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="min-h-screen bg-[#0a0a0a] py-12 px-4 sm:px-6 lg:px-8 font-sans text-gray-100 flex justify-center relative pb-32">
+      <div className="max-w-4xl w-full space-y-6">
         
+        {/* Header Page */}
+        <div className="flex items-center gap-4 border-b border-[#2e2e2e] pb-6">
+          <Link href="/dashboard" title="Kembali" className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors group">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+          </Link>
+          <h1 className="text-3xl font-bold text-white">Keranjang Sewa</h1>
+        </div>
+
         {/* Daftar Keranjang */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" title="Kembali" className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors group">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform">
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-            </Link>
-            <h1 className="text-2xl font-bold text-white">Keranjang Sewa</h1>
-          </div>
-          
-          <div className="space-y-4">
-            {cartItems.map((cart) => (
-              <div key={cart.id} className="bg-[#161616] rounded-2xl border border-[#2e2e2e] p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <div className="w-20 h-20 bg-[#0a0a0a] rounded-lg overflow-hidden border border-[#2e2e2e] shrink-0">
+        <div className="space-y-4">
+          {cartItems.map((cart) => {
+            const isSelected = selectedCartIds.includes(cart.id)
+
+            return (
+              <div 
+                key={cart.id} 
+                className={`bg-[#161616] rounded-2xl border p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center transition-all ${
+                  isSelected ? 'border-emerald-500/50 bg-[#161616]' : 'border-[#2e2e2e] opacity-75'
+                }`}
+              >
+                {/* Checkbox item */}
+                <div className="flex items-center self-center shrink-0">
+                  <input 
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => handleToggleSelectItem(cart.id)}
+                    className="w-5 h-5 rounded accent-emerald-500 cursor-pointer bg-[#0a0a0a] border-[#2e2e2e]"
+                  />
+                </div>
+
+                <div className="w-20 h-20 bg-[#0a0a0a] rounded-xl overflow-hidden border border-[#2e2e2e] shrink-0">
                   {cart.items.image_url ? (
                     <img src={cart.items.image_url} alt={cart.items.name} className="w-full h-full object-cover" />
                   ) : (
@@ -208,8 +235,8 @@ export default function CartPage() {
                 </div>
                 
                 <div className="flex-1">
-                  <h3 className="font-bold text-white">{cart.items.name}</h3>
-                  <p className="text-xs text-gray-500 mb-2">{cart.items.stores.store_name}</p>
+                  <h3 className="font-bold text-white text-base">{cart.items.name}</h3>
+                  <p className="text-xs text-gray-400 mb-2">{cart.items.stores?.store_name}</p>
                   <p className="text-emerald-400 font-bold">{formatRupiah(cart.items.price_per_day)}<span className="text-xs text-gray-500 font-normal"> /hari</span></p>
                 </div>
 
@@ -232,94 +259,61 @@ export default function CartPage() {
                     </div>
                     <button 
                       onClick={() => openDetailModal(cart.items)}
-                      className="text-[10px] text-blue-400 hover:text-blue-300 hover:underline transition-colors"
+                      className="text-[11px] text-blue-400 hover:text-blue-300 hover:underline transition-colors"
                     >
                       Lihat Detail
                     </button>
                   </div>
                   
-                  <button onClick={() => handleRemove(cart.id)} className="text-red-500 hover:bg-red-900/20 p-2 rounded-lg transition-colors mt-0.5">
+                  <button onClick={() => handleRemove(cart.id)} className="text-red-500 hover:bg-red-900/20 p-2 rounded-lg transition-colors mt-0.5" title="Hapus dari keranjang">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                     </svg>
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
+            )
+          })}
         </div>
 
-        {/* Ringkasan Checkout */}
-        {cartItems.length > 0 && (
-          <div className="bg-[#161616] p-6 rounded-2xl border border-[#2e2e2e] h-fit sticky top-24">
-            <h2 className="text-lg font-bold text-white mb-4 border-b border-[#2e2e2e] pb-2">Jadwal Pendakian</h2>
-            <form onSubmit={handleOpenPayment} className="space-y-5">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1">Tanggal Ambil</label>
-                  <input
-                    type="date"
-                    required
-                    value={startDate}
-                    min={new Date().toISOString().split('T')[0]}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[#0a0a0a] border border-[#2c1f1f] text-white outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:brightness-0 [&::-webkit-calendar-picker-indicator]:saturate-100 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:sepia [&::-webkit-calendar-picker-indicator]:hue-rotate-[100deg]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1">Tanggal Kembali</label>
-                  <input
-                    type="date"
-                    required
-                    value={endDate}
-                    min={startDate || new Date().toISOString().split('T')[0]} 
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:brightness-0 [&::-webkit-calendar-picker-indicator]:saturate-100 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:sepia [&::-webkit-calendar-picker-indicator]:hue-rotate-[100deg]"
-                  />
-                </div>
-              </div>
+      </div>
 
-              <div className="bg-[#0a0a0a] p-4 rounded-xl border border-[#2e2e2e] space-y-2">
-                <div className="flex justify-between text-sm text-gray-400">
-                  <span>Durasi Sewa</span>
-                  <span>{totalDays} Hari</span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-400">
-                  <span>Total Item</span>
-                  <span>{cartItems.reduce((acc, item) => acc + item.quantity, 0)} Pcs</span>
-                </div>
-                <div className="pt-2 border-t border-[#2e2e2e] flex justify-between font-bold text-white items-center mt-2">
-                  <span>Grand Total</span>
-                  <span className="text-emerald-400 text-lg">{formatRupiah(grandTotal)}</span>
-                </div>
-              </div>
-
-              {/* CHECKBOX JAMINAN IDENTITAS */}
-              <div className="bg-amber-900/10 border border-amber-500/30 rounded-xl p-3">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={isGuaranteeChecked}
-                    onChange={(e) => setIsGuaranteeChecked(e.target.checked)}
-                    className="w-4 h-4 mt-0.5 accent-amber-500 bg-gray-700 border-gray-600 rounded shrink-0 cursor-pointer"
-                  />
-                  <span className="text-xs text-gray-300 leading-relaxed">
-                    Saya bersedia menjaminkan identitas asli (<span className="text-amber-400 font-bold">KTP / SIM / KK / KTM</span>) kepada Mitra saat pengambilan alat.
-                  </span>
-                </label>
-              </div>
-
-              <button
-                type="submit"
-                disabled={!startDate || !endDate || !isGuaranteeChecked}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Lanjutkan Pembayaran
-              </button>
-            </form>
+      {/* STICKY BOTTOM BAR (Shopee / TikTok Shop Pattern) */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#161616]/95 backdrop-blur-md border-t border-[#2e2e2e] p-4 shadow-2xl">
+        <div className="max-w-4xl mx-auto flex flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input 
+                type="checkbox"
+                checked={isAllSelected}
+                onChange={handleToggleSelectAll}
+                className="w-5 h-5 rounded accent-emerald-500 cursor-pointer bg-[#0a0a0a] border-[#2e2e2e]"
+              />
+              <span className="text-sm font-semibold text-gray-300">Pilih Semua</span>
+            </label>
+            <div>
+              <p className="text-xs text-gray-400">
+                Total Ringkasan ({selectedCartIds.length} Alat) <span className="text-[10px] text-emerald-400 font-semibold">(Est. 1 Hari)</span>
+              </p>
+              <p className="text-emerald-400 font-bold text-xl sm:text-2xl">
+                {formatRupiah(totalPriceDefault1Day)}
+              </p>
+            </div>
           </div>
-        )}
 
+          <button
+            onClick={handleProceedToCheckout}
+            disabled={selectedCartIds.length === 0}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-6 sm:px-10 rounded-xl transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 text-sm sm:text-base flex items-center gap-2"
+          >
+            <span>Sewa Sekarang</span>
+            {selectedCartIds.length > 0 && (
+              <span className="bg-emerald-700 text-white text-xs px-2 py-0.5 rounded-full font-extrabold">
+                {selectedCartIds.length}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* ================= MODAL DETAIL ALAT ================= */}
@@ -373,100 +367,6 @@ export default function CartPage() {
         </div>
       )}
 
-      {/* ================= MODAL DUMMY PAYMENT GATEWAY ================= */}
-      {isPaymentModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200 text-gray-900">
-            
-            {/* Payment Header */}
-            <div className="bg-gray-50 p-4 border-b border-gray-200 flex justify-between items-center">
-              <div>
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Payment Gateway</p>
-                <p className="font-bold text-gray-800">HikeIt Secure Pay</p>
-              </div>
-              <button onClick={() => setIsPaymentModalOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors">
-                Batal
-              </button>
-            </div>
-
-            {/* Payment Body */}
-            <div className="p-6">
-              <div className="text-center mb-6">
-                <p className="text-sm text-gray-500 mb-1">Total Tagihan</p>
-                <p className="text-3xl font-extrabold text-gray-900">{formatRupiah(grandTotal)}</p>
-                <p className="text-xs text-red-500 mt-2 font-medium">Bayar sebelum batas waktu berakhir</p>
-              </div>
-
-              {/* Tabs Mode Pembayaran */}
-              <div className="flex border border-gray-200 rounded-lg overflow-hidden mb-6">
-                <button 
-                  onClick={() => setPaymentMethod('qris')}
-                  className={`flex-1 py-2 text-sm font-bold transition-colors ${paymentMethod === 'qris' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
-                >
-                  QRIS
-                </button>
-                <button 
-                  onClick={() => setPaymentMethod('va')}
-                  className={`flex-1 py-2 text-sm font-bold transition-colors ${paymentMethod === 'va' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
-                >
-                  Virtual Account
-                </button>
-              </div>
-
-              {/* Mencegah lompatan ukuran card dengan memberikan min-height tetap */}
-              <div className="min-h-[250px] flex flex-col justify-center">
-                {/* Tampilan QRIS */}
-                {paymentMethod === 'qris' && (
-                  <div className="flex flex-col items-center">
-                    <div className="w-48 h-48 bg-gray-100 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center mb-4 relative overflow-hidden">
-                      <div className="grid grid-cols-4 grid-rows-4 gap-1 w-32 h-32 opacity-20">
-                        {[...Array(16)].map((_, i) => (
-                          <div key={i} className={`bg-black ${i % 2 === 0 ? 'rounded-tl-lg' : ''} ${i % 3 === 0 ? 'rounded-br-lg' : ''}`}></div>
-                        ))}
-                      </div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="bg-white px-2 py-1 rounded text-xs font-bold border border-gray-200 shadow-sm">GOPAY / OVO / DANA</span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 text-center">Scan QR Code di atas menggunakan aplikasi e-Wallet atau Mobile Banking Anda.</p>
-                  </div>
-                )}
-
-                {/* Tampilan Virtual Account */}
-                {paymentMethod === 'va' && (
-                  <div className="space-y-4">
-                    <div className="bg-gray-50 p-4 border border-gray-200 rounded-xl">
-                      <p className="text-xs text-gray-500 mb-1">BCA Virtual Account</p>
-                      <div className="flex justify-between items-center">
-                        <p className="text-xl font-mono font-bold text-gray-900 tracking-wider">8077 1234 5678</p>
-                        <button className="text-blue-600 text-sm font-bold hover:text-blue-800">Salin</button>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 text-center">Pastikan nama penerima adalah <span className="font-bold">HikeIt - {profile?.full_name || 'Pendaki'}</span></p>
-                  </div>
-                )}
-              </div>
-
-            </div>
-
-            {/* Payment Footer - Dummy Simulator Button */}
-            <div className="p-4 bg-gray-50 border-t border-gray-200">
-              <button 
-                onClick={executePaymentSuccess}
-                disabled={checkoutLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-500/30 disabled:opacity-50"
-              >
-                {checkoutLoading ? 'Memverifikasi...' : 'Simulasikan Pembayaran Berhasil'}
-              </button>
-              <p className="text-[10px] text-gray-400 text-center mt-3 font-medium">
-                *Tombol ini khusus untuk keperluan simulasi demonstrasi aplikasi.
-              </p>
-            </div>
-
-          </div>
-        </div>
-      )}
-
       {/* ================= MODAL KONFIRMASI HAPUS BARANG ================= */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -498,4 +398,4 @@ export default function CartPage() {
 
     </div>
   )
-}
+}
