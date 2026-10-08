@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
@@ -70,6 +70,7 @@ export default function ProfilePage() {
     setSaving(true)
 
     try {
+      // 1. Update Profile Info
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ full_name: fullName, phone_number: phoneNumber })
@@ -77,6 +78,7 @@ export default function ProfilePage() {
 
       if (profileError) throw profileError
 
+      // 2. Update Store Info (if provider)
       if (role === 'penyedia' && storeId) {
         const { error: storeError } = await supabase
           .from('stores')
@@ -91,11 +93,10 @@ export default function ProfilePage() {
         if (storeError) throw storeError
       }
       
-      alert('Perubahan berhasil disimpan!')
       router.push('/dashboard')
       router.refresh()
     } catch (error: any) {
-      alert('Gagal menyimpan perubahan: ' + error.message)
+      console.error('Gagal menyimpan perubahan:', error.message)
     } finally {
       setSaving(false)
     }
@@ -112,11 +113,14 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] py-12 px-4 sm:px-6 lg:px-8 font-sans text-gray-100 flex justify-center items-start">
       <div className="max-w-2xl w-full bg-[#161616] p-8 rounded-2xl shadow-2xl border border-[#2e2e2e]">
-        <Link href="/dashboard" className="text-emerald-500 text-sm font-medium hover:underline mb-6 inline-block">
-          &larr; Kembali ke Dashboard
+        <Link href="/dashboard" className="inline-flex items-center gap-2 text-emerald-500 text-sm font-semibold hover:text-emerald-300 transition-colors group mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          Kembali ke Dashboard
         </Link>
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white mb-1">Pengaturan Akun</h1>
+          <h1 className="text-2xl font-bold text-white mb-1">Edit Profil</h1>
           <p className="text-gray-400 text-sm">Kelola informasi pribadi {role === 'penyedia' && 'dan data tokomu'} di sini.</p>
         </div>
 
@@ -132,7 +136,7 @@ export default function ProfilePage() {
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white focus:ring-2 focus:ring-emerald-500/50 outline-none"
+                  className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white focus:ring-2 focus:ring-emerald-500/50 outline-none text-sm"
                 />
               </div>
               <div className="space-y-2">
@@ -141,7 +145,7 @@ export default function ProfilePage() {
                   type="tel"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white focus:ring-2 focus:ring-emerald-500/50 outline-none"
+                  className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white focus:ring-2 focus:ring-emerald-500/50 outline-none text-sm"
                   placeholder="Contoh: 081234567890"
                 />
               </div>
@@ -159,7 +163,7 @@ export default function ProfilePage() {
                     required
                     value={storeName}
                     onChange={(e) => setStoreName(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white focus:ring-2 focus:ring-emerald-500/50 outline-none"
+                    className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white focus:ring-2 focus:ring-emerald-500/50 outline-none text-sm"
                   />
                 </div>
                 <div className="space-y-2">
@@ -169,7 +173,7 @@ export default function ProfilePage() {
                     required
                     value={hours}
                     onChange={(e) => setHours(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white focus:ring-2 focus:ring-emerald-500/50 outline-none"
+                    className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white focus:ring-2 focus:ring-emerald-500/50 outline-none text-sm"
                   />
                 </div>
               </div>
@@ -180,7 +184,7 @@ export default function ProfilePage() {
                   required
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white focus:ring-2 focus:ring-emerald-500/50 outline-none h-20 resize-none"
+                  className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white focus:ring-2 focus:ring-emerald-500/50 outline-none h-20 resize-none text-sm"
                 />
               </div>
 
@@ -190,7 +194,7 @@ export default function ProfilePage() {
                   type="url"
                   value={mapsLink}
                   onChange={(e) => setMapsLink(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white focus:ring-2 focus:ring-emerald-500/50 outline-none"
+                  className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white focus:ring-2 focus:ring-emerald-500/50 outline-none text-sm"
                   placeholder="https://goo.gl/maps/..."
                 />
               </div>
@@ -201,8 +205,11 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => router.back()}
-              className="flex-1 bg-[#2e2e2e] hover:bg-[#3e3e3e] text-white font-semibold py-3 rounded-xl transition-colors"
+              className="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl transition-colors group"
             >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
               Batal
             </button>
             <button
@@ -210,11 +217,11 @@ export default function ProfilePage() {
               disabled={saving}
               className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50"
             >
-              {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+              {saving ? 'Menyimpan...' : 'Simpan Profil'}
             </button>
           </div>
         </form>
       </div>
     </div>
   )
-}
+}

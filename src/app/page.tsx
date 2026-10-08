@@ -11,6 +11,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+
+  // === STATE UNTUK FITUR LUPA PASSWORD ===
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotMessage, setForgotMessage] = useState<string | null>(null)
+  const [forgotError, setForgotError] = useState<string | null>(null)
   
   const router = useRouter()
   const supabase = createClient()
@@ -31,6 +38,45 @@ export default function LoginPage() {
       router.push('/dashboard') 
     }
     setLoading(false)
+  }
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setForgotLoading(true)
+    setForgotError(null)
+    setForgotMessage(null)
+
+    if (!forgotEmail) {
+      setForgotError('Silakan masukkan email kamu.')
+      setForgotLoading(false)
+      return
+    }
+
+    try {
+      const redirectUrl = `${window.location.origin}/reset-password`
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: redirectUrl,
+      })
+
+      if (error) {
+        setForgotError(error.message)
+      } else {
+        setForgotMessage(
+          `Instruksi reset password telah dikirim ke ${forgotEmail}. Silakan periksa folder Inbox/Spam email kamu.`
+        )
+      }
+    } catch (err: any) {
+      setForgotError(err.message || 'Gagal mengirim instruksi reset password.')
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
+  const openForgotModal = () => {
+    setForgotEmail(email) // Otomatis isi jika sudah pernah diketik di form login
+    setForgotError(null)
+    setForgotMessage(null)
+    setIsForgotPasswordOpen(true)
   }
 
   return (
@@ -84,12 +130,21 @@ export default function LoginPage() {
                 )}
               </button>
             </div>
+            <div className="text-right mt-1.5">
+              <button
+                type="button"
+                onClick={openForgotModal}
+                className="text-xs text-emerald-500 hover:text-emerald-400 transition-colors font-medium hover:underline"
+              >
+                Lupa password?
+              </button>
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50 mt-4"
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50 mt-4 cursor-pointer"
           >
             {loading ? 'Memeriksa...' : 'Masuk'}
           </button>
@@ -102,6 +157,92 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
+
+      {/* ================= MODAL LUPA PASSWORD ================= */}
+      {isForgotPasswordOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#161616] border border-[#2e2e2e] rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+            <button 
+              onClick={() => setIsForgotPasswordOpen(false)} 
+              className="absolute top-4 right-4 text-gray-500 hover:text-white p-1 rounded-lg"
+            >
+              ✕
+            </button>
+            
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Lupa Password?</h2>
+                <p className="text-xs text-gray-400">Masukkan email untuk memulihkan akses akun</p>
+              </div>
+            </div>
+
+            {forgotMessage ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-sm rounded-xl space-y-2">
+                  <p className="font-semibold flex items-center gap-1.5">
+                    <span>✓</span> Email Terkirim!
+                  </p>
+                  <p className="text-xs text-gray-300 leading-relaxed">
+                    {forgotMessage}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPasswordOpen(false)}
+                  className="w-full bg-[#2e2e2e] hover:bg-[#3e3e3e] text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+                >
+                  Kembali ke Form Login
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                {forgotError && (
+                  <div className="p-3 bg-red-900/30 border border-red-800 text-red-400 text-xs rounded-xl">
+                    {forgotError}
+                  </div>
+                )}
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Email Terdaftar</label>
+                  <input
+                    type="email"
+                    required
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="nama@email.com"
+                    className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white placeholder-gray-600 focus:ring-2 focus:ring-emerald-500/50 outline-none text-sm"
+                  />
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    Kami akan mengirimkan link untuk membuat password baru ke email ini.
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsForgotPasswordOpen(false)}
+                    className="flex-1 bg-[#2e2e2e] hover:bg-[#3e3e3e] text-gray-300 text-sm font-semibold py-3 rounded-xl transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold py-3 rounded-xl transition-colors disabled:opacity-50"
+                  >
+                    {forgotLoading ? 'Mengirim...' : 'Kirim Link Reset'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

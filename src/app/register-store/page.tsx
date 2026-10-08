@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
@@ -55,11 +55,10 @@ export default function RegisterStorePage() {
 
       if (profileError) throw profileError
 
-      alert("Toko berhasil didaftarkan! Selamat datang sebagai Mitra HikeIt.")
       router.push('/dashboard')
       
     } catch (error: any) {
-      alert(error.message || "Terjadi kesalahan saat mendaftar toko.")
+      console.error(error.message || "Terjadi kesalahan saat mendaftar toko.")
     } finally {
       setLoading(false)
     }
@@ -69,8 +68,11 @@ export default function RegisterStorePage() {
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 py-12">
       <div className="bg-[#161616] p-8 rounded-2xl border border-[#2e2e2e] w-full max-w-2xl shadow-2xl">
         <div className="mb-6 border-b border-[#2e2e2e] pb-6">
-          <Link href="/dashboard" className="text-emerald-500 text-sm font-medium hover:underline mb-4 inline-block">
-            &larr; Kembali
+          <Link href="/dashboard" className="inline-flex items-center gap-2 text-emerald-500 text-sm font-semibold hover:text-emerald-300 transition-colors group mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            Kembali
           </Link>
           <h1 className="text-3xl font-bold text-white mb-2">Buka Rental Pertamamu</h1>
           <p className="text-gray-400">Bergabung jadi Mitra HikeIt dan mulai sewakan peralatan outdoormu ke ribuan pendaki.</p>
@@ -161,7 +163,10 @@ export default function RegisterStorePage() {
             {!latitude && !longitude && (
                <p className="text-xs text-red-400 text-center">* Wajib menitikkan pin di peta sebelum mendaftar.</p>
             )}
-            <Link href="/dashboard" className="w-full bg-[#2e2e2e] hover:bg-[#3e3e3e] text-center text-white font-medium py-3 rounded-xl transition-colors">
+            <Link href="/dashboard" className="w-full inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-center text-white font-medium py-3 rounded-xl transition-colors group">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
               Batal
             </Link>
           </div>

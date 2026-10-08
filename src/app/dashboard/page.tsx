@@ -93,18 +93,18 @@ export default function DashboardPage() {
 
       // 2. Ambil data Barang (Items) berdasarkan Role
       if (currentProfile?.role === 'penyedia') {
-        const { data: storeData } = await supabase
+        const { data: storeDetails } = await supabase
           .from('stores')
           .select('id')
           .eq('owner_id', session.user.id)
           .single()
 
-        if (storeData) {
+        if (storeDetails) {
           // Ambil daftar barang milik toko
           const { data: myItems } = await supabase
             .from('items')
             .select('*')
-            .eq('store_id', storeData.id)
+            .eq('store_id', storeDetails.id)
             .order('created_at', { ascending: false })
           
           if (myItems) setItems(myItems)
@@ -113,7 +113,7 @@ export default function DashboardPage() {
           const { data: myRentals } = await supabase
             .from('rentals')
             .select('total_price, status, created_at, items!inner(store_id)')
-            .eq('items.store_id', storeData.id)
+            .eq('items.store_id', storeDetails.id)
 
           if (myRentals) {
             const active = myRentals.filter(r => r.status === 'diproses').length
@@ -144,7 +144,7 @@ export default function DashboardPage() {
               profiles:user_id (full_name),
               items!inner (name, store_id)
             `)
-            .eq('items.store_id', storeData.id)
+            .eq('items.store_id', storeDetails.id)
             .order('created_at', { ascending: false })
             .limit(10) // Ambil 10 ulasan terbaru
             
@@ -188,13 +188,10 @@ export default function DashboardPage() {
       .single()
 
     if (existingCart) {
-      const { error } = await supabase
+      await supabase
         .from('carts')
         .update({ quantity: existingCart.quantity + 1 })
         .eq('id', existingCart.id)
-        
-      if (!error) alert("Jumlah barang di keranjang berhasil ditambahkan!")
-      else alert("Gagal update keranjang.")
     } else {
       const { error } = await supabase
         .from('carts')
@@ -202,9 +199,6 @@ export default function DashboardPage() {
 
       if (!error) {
         setCartCount(prev => prev + 1)
-        alert("Barang ditambahkan ke keranjang!")
-      } else {
-        alert("Gagal menambahkan barang.")
       }
     }
   }
@@ -262,7 +256,6 @@ export default function DashboardPage() {
 
       if (error) throw error
 
-      alert("Data alat berhasil diperbarui!")
       setIsEditModalOpen(false)
       
       setItems(prevItems => 
@@ -273,7 +266,7 @@ export default function DashboardPage() {
         )
       )
     } catch (error: any) {
-      alert("Gagal memperbarui data: " + error.message)
+      console.error("Gagal memperbarui data:", error.message)
     } finally {
       setIsUpdatingItem(false)
     }
@@ -281,10 +274,6 @@ export default function DashboardPage() {
 
   // === FUNGSI HAPUS ALAT ===
   const handleDeleteItem = async (itemId: string, itemName: string) => {
-    // Tampilkan konfirmasi keamanan agar tidak tidak sengaja terhapus
-    const confirmDelete = window.confirm(`Apakah Anda yakin ingin menghapus "${itemName}" dari katalog?`);
-    if (!confirmDelete) return;
-
     try {
       const { error } = await supabase
         .from('items')
@@ -293,12 +282,10 @@ export default function DashboardPage() {
 
       if (error) throw error;
 
-      alert("Alat berhasil dihapus!");
-      
       // Update state lokal agar baris di tabel langsung hilang tanpa perlu refresh
       setItems(prevItems => prevItems.filter(item => item.id !== itemId));
     } catch (error: any) {
-      alert("Gagal menghapus alat. Pastikan alat ini tidak sedang dalam transaksi aktif. Error: " + error.message);
+      console.error("Gagal menghapus alat:", error.message);
     }
   }
 
@@ -316,7 +303,6 @@ export default function DashboardPage() {
 
       if (error) throw error
 
-      alert("Balasan berhasil dikirim!")
       setReplyModalOpen(false)
       
       // Update data di state lokal agar muncul langsung tanpa refresh
@@ -324,7 +310,7 @@ export default function DashboardPage() {
         r.id === selectedReview.id ? { ...r, reply: replyText } : r
       ))
     } catch (error: any) {
-      alert("Gagal mengirim balasan: " + error.message)
+      console.error("Gagal mengirim balasan:", error.message)
     } finally {
       setIsSubmittingReply(false)
     }
@@ -356,7 +342,6 @@ export default function DashboardPage() {
   const handleCreateBundle = async (e: React.FormEvent) => {
     e.preventDefault()
     if (selectedBundleItems.length < 2) {
-      alert("Pilih minimal 2 alat untuk dijadikan satu paket bundling!")
       return
     }
 
@@ -369,7 +354,6 @@ export default function DashboardPage() {
         .single()
 
       if (!storeData) {
-        alert("Data toko tidak ditemukan.")
         setIsSubmittingBundle(false)
         return
       }
@@ -412,7 +396,6 @@ export default function DashboardPage() {
 
       if (error) throw error
 
-      alert("Paket Bundling berhasil dibuat!")
       if (newBundle) setItems([newBundle, ...items])
       
       // Reset semua state modal
@@ -422,7 +405,7 @@ export default function DashboardPage() {
       setBundleStock(1)
       setBundleImageFile(null) // Reset gambar
     } catch (error: any) {
-      alert("Gagal membuat paket bundling: " + error.message)
+      console.error("Gagal membuat paket bundling:", error.message)
     } finally {
       setIsSubmittingBundle(false)
     }
@@ -503,14 +486,19 @@ export default function DashboardPage() {
               <div className="h-6 w-[1px] bg-[#2e2e2e] mx-1"></div>
 
               <div className="relative">
-                <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-3 focus:outline-none hover:bg-[#2e2e2e] p-1.5 rounded-xl transition-colors">
+                <button 
+                  onClick={() => setIsProfileOpen(!isProfileOpen)} 
+                  className="flex items-center gap-3 focus:outline-none hover:bg-[#2e2e2e] p-1.5 rounded-xl transition-colors cursor-pointer"
+                >
                   <div className="text-right hidden sm:block">
                     <p className="text-sm font-medium text-white">{profile?.full_name}</p>
                     <p className="text-[10px] text-gray-500 uppercase tracking-wider">
                       {profile?.role === 'penyedia' ? 'Mitra' : 'Pendaki'}
                     </p>
                   </div>
-                  <div className="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold shadow-lg ring-2 ring-[#2e2e2e]">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold shadow-lg ring-2 ring-[#2e2e2e] ${
+                    profile?.role === 'penyedia' ? 'bg-amber-600' : 'bg-emerald-600'
+                  }`}>
                     {initial}
                   </div>
                 </button>
@@ -521,13 +509,16 @@ export default function DashboardPage() {
                       <p className="text-sm font-medium text-white">{profile?.full_name}</p>
                       <p className="text-xs text-gray-400">{profile?.role === 'penyedia' ? 'Mitra' : 'Pendaki'}</p>
                     </div>
-                    <Link href="/profile" className="block px-4 py-2 text-sm text-gray-300 hover:bg-[#2e2e2e] hover:text-white transition-colors">
-                        Edit Profil
+                    <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="block px-4 py-2 text-sm text-gray-300 hover:bg-[#2e2e2e] hover:text-white transition-colors">
+                      Edit Profil
+                    </Link>
+                    <Link href="/change-password" onClick={() => setIsProfileOpen(false)} className="block px-4 py-2 text-sm text-gray-300 hover:bg-[#2e2e2e] hover:text-white transition-colors">
+                      Ganti Password
                     </Link>
                     {profile?.role === 'penyewa' && (
-                        <Link href="/register-store" className="block px-4 py-2 text-sm text-emerald-400 hover:bg-[#2e2e2e] transition-colors">
+                      <Link href="/register-store" onClick={() => setIsProfileOpen(false)} className="block px-4 py-2 text-sm text-emerald-400 hover:bg-[#2e2e2e] transition-colors">
                         Daftar Jadi Mitra
-                        </Link>
+                      </Link>
                     )}
                     <div className="border-t border-[#2e2e2e] mt-2 pt-2">
                       <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-900/20 transition-colors">
