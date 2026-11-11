@@ -546,8 +546,9 @@ export default function DashboardPage() {
               <div className="flex gap-4 max-w-2xl mb-6">
                 <input 
                   type="text" 
+                  maxLength={30}
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => setSearchQuery(e.target.value.slice(0, 30))}
                   placeholder="Cari tenda, paket bundling, jaket..." 
                   className="flex-1 px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white placeholder-gray-600 focus:ring-2 focus:ring-emerald-500/50 outline-none"
                 />

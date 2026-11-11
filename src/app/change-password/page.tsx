@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
@@ -66,8 +66,8 @@ export default function ChangePasswordPage() {
         return
       }
 
-      if (newPassword.length < 6) {
-        setError('Password baru minimal 6 karakter.')
+      if (newPassword.length < 6 || newPassword.length > 8) {
+        setError('Password baru harus antara 6 sampai 8 karakter.')
         return
       }
 
@@ -161,10 +161,12 @@ export default function ChangePasswordPage() {
                   id="old-password"
                   type={showOldPassword ? 'text' : 'password'}
                   required
+                  minLength={6}
+                  maxLength={8}
                   value={oldPassword}
                   onChange={(e) => setOldPassword(e.target.value)}
                   className="w-full px-4 py-3 pr-12 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white placeholder-gray-600 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all text-sm"
-                  placeholder="Masukkan password saat ini"
+                  placeholder="Masukkan password saat ini (6 - 8 karakter)"
                 />
                 <button
                   type="button"
@@ -189,10 +191,12 @@ export default function ChangePasswordPage() {
                     id="new-password"
                     type={showNewPassword ? 'text' : 'password'}
                     required
+                    minLength={6}
+                    maxLength={8}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="w-full px-4 py-3 pr-12 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white placeholder-gray-600 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all text-sm"
-                    placeholder="Minimal 6 karakter"
+                    placeholder="Password baru (6 - 8 karakter)"
                   />
                   <button
                     type="button"
@@ -212,10 +216,12 @@ export default function ChangePasswordPage() {
                     id="confirm-password"
                     type={showConfirmPassword ? 'text' : 'password'}
                     required
+                    minLength={6}
+                    maxLength={8}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="w-full px-4 py-3 pr-12 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white placeholder-gray-600 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all text-sm"
-                    placeholder="Ulangi password baru"
+                    placeholder="Ulangi password baru (6 - 8 karakter)"
                   />
                   <button
                     type="button"

@@ -52,6 +52,12 @@ export default function LoginPage() {
       return
     }
 
+    if (forgotEmail.length > 50) {
+      setForgotError('Panjang email maksimal 50 karakter.')
+      setForgotLoading(false)
+      return
+    }
+
     try {
       const redirectUrl = `${window.location.origin}/reset-password`
       const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
@@ -95,6 +101,7 @@ export default function LoginPage() {
             <input
               type="email"
               required
+              maxLength={50}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white placeholder-gray-600 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all"
@@ -108,10 +115,12 @@ export default function LoginPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 required
+                minLength={6}
+                maxLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white placeholder-gray-600 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all"
-                placeholder="Masukkan password"
+                placeholder="Masukkan password (6 - 8 karakter)"
               />
               <button
                 type="button"
@@ -212,6 +221,7 @@ export default function LoginPage() {
                   <input
                     type="email"
                     required
+                    maxLength={50}
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
                     placeholder="nama@email.com"

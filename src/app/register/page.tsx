@@ -21,6 +21,18 @@ export default function RegisterPage() {
     setLoading(true)
     setError(null)
 
+    if (name.trim().length < 1 || name.length > 50) {
+      setError('Nama lengkap harus antara 1 sampai 50 karakter.')
+      setLoading(false)
+      return
+    }
+
+    if (password.length < 6 || password.length > 8) {
+      setError('Password harus antara 6 sampai 8 karakter.')
+      setLoading(false)
+      return
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -55,6 +67,8 @@ export default function RegisterPage() {
             <input
               type="text"
               required
+              minLength={1}
+              maxLength={50}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white placeholder-gray-600 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all"
@@ -67,6 +81,7 @@ export default function RegisterPage() {
             <input
               type="email"
               required
+              maxLength={50}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white placeholder-gray-600 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all"
@@ -80,10 +95,12 @@ export default function RegisterPage() {
                 <input
                 type={showPassword ? "text" : "password"}
                 required
+                minLength={6}
+                maxLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white placeholder-gray-600 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all"
-                placeholder="Masukkan password"
+                placeholder="Password (6 - 8 karakter)"
                 />
                 <button
                 type="button"

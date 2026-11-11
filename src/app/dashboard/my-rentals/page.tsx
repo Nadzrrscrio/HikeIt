@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
@@ -15,6 +15,7 @@ export default function MyRentalsPage() {
   const [rating, setRating] = useState(5)
   const [comment, setComment] = useState('')
   const [submittingReview, setSubmittingReview] = useState(false)
+  const [reviewError, setReviewError] = useState<string | null>(null)
   
   // State tambahan untuk Edit Mode
   const [isEditing, setIsEditing] = useState(false)
@@ -68,6 +69,7 @@ export default function MyRentalsPage() {
 
   const openReviewModal = (rental: any, review?: any) => {
     setSelectedRental(rental)
+    setReviewError(null)
     if (review) {
       setRating(review.rating)
       setComment(review.comment)
@@ -85,6 +87,13 @@ export default function MyRentalsPage() {
   const submitReview = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedRental) return
+    setReviewError(null)
+
+    if (comment.trim().length < 1 || comment.length > 150) {
+      setReviewError('Komentar ulasan harus antara 1 sampai 150 karakter.')
+      return
+    }
+
     setSubmittingReview(true)
 
     const { data: { session } } = await supabase.auth.getSession()
@@ -269,6 +278,13 @@ export default function MyRentalsPage() {
               </p>
 
               <form onSubmit={submitReview} className="space-y-6">
+                {reviewError && (
+                  <div className="p-3 bg-red-900/30 border border-red-800 text-red-400 text-xs rounded-xl flex items-start gap-2">
+                    <span className="mt-0.5">⚠️</span>
+                    <span>{reviewError}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-center gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button key={star} type="button" onClick={() => setRating(star)} className="focus:outline-none transition-transform hover:scale-110">
@@ -280,9 +296,16 @@ export default function MyRentalsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-300">Komentar Singkat</label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-medium text-gray-300">Komentar Singkat</label>
+                    <span className={`text-xs ${comment.length > 150 ? 'text-red-400 font-bold' : 'text-gray-500'}`}>
+                      {comment.length}/150
+                    </span>
+                  </div>
                   <textarea
                     required
+                    minLength={1}
+                    maxLength={150}
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     placeholder="Contoh: Frame tendanya masih kokoh banget..."

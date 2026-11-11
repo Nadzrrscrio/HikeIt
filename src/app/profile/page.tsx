@@ -18,6 +18,7 @@ export default function ProfilePage() {
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
 
   const router = useRouter()
@@ -67,6 +68,18 @@ export default function ProfilePage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!userId) return
+    setError(null)
+
+    if (!fullName.trim() || fullName.length > 50) {
+      setError('Nama lengkap harus antara 1 sampai 50 karakter.')
+      return
+    }
+
+    if (phoneNumber && (phoneNumber.length < 10 || phoneNumber.length > 13)) {
+      setError('Nomor HP/WhatsApp harus antara 10 sampai 13 digit.')
+      return
+    }
+
     setSaving(true)
 
     try {
@@ -125,6 +138,12 @@ export default function ProfilePage() {
         </div>
 
         <form onSubmit={handleSave} className="space-y-8">
+          {error && (
+            <div className="p-3 bg-red-900/30 border border-red-800 text-red-400 text-sm rounded-xl flex items-start gap-2">
+              <span className="mt-0.5">⚠️</span>
+              <span>{error}</span>
+            </div>
+          )}
           
           <div className="space-y-4">
             <h2 className="text-lg font-bold text-emerald-500 border-b border-[#2e2e2e] pb-2">Informasi Pribadi</h2>
@@ -134,8 +153,11 @@ export default function ProfilePage() {
                 <input
                   type="text"
                   required
+                  minLength={1}
+                  maxLength={50}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Nama lengkap"
                   className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white focus:ring-2 focus:ring-emerald-500/50 outline-none text-sm"
                 />
               </div>
@@ -143,6 +165,8 @@ export default function ProfilePage() {
                 <label className="text-sm font-medium text-gray-300">Nomor WhatsApp</label>
                 <input
                   type="tel"
+                  minLength={10}
+                  maxLength={13}
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white focus:ring-2 focus:ring-emerald-500/50 outline-none text-sm"

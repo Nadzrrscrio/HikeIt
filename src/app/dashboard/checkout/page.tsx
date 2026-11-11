@@ -85,6 +85,9 @@ export default function CheckoutPage() {
     }
   }
 
+  const todayStr = new Date().toISOString().split('T')[0]
+  const maxFutureDateStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
   const calculateDays = () => {
     if (!startDate || !endDate) return 0
     const start = new Date(startDate)
@@ -102,6 +105,12 @@ export default function CheckoutPage() {
   const handleOpenPayment = (e: React.FormEvent) => {
     e.preventDefault()
     if (!userId || cartItems.length === 0 || !isGuaranteeChecked || !startDate || !endDate) return
+
+    if (totalDays < 1 || totalDays > 30) {
+      alert('Durasi sewa minimal 1 hari dan maksimal 30 hari.')
+      return
+    }
+
     setIsPaymentModalOpen(true)
   }
 
@@ -218,7 +227,8 @@ export default function CheckoutPage() {
                   type="date"
                   required
                   value={startDate}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={todayStr}
+                  max={maxFutureDateStr}
                   onChange={(e) => setStartDate(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white outline-none focus:border-emerald-500 transition-colors [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:brightness-0 [&::-webkit-calendar-picker-indicator]:saturate-100 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:sepia [&::-webkit-calendar-picker-indicator]:hue-rotate-[100deg]"
                 />
@@ -229,7 +239,8 @@ export default function CheckoutPage() {
                   type="date"
                   required
                   value={endDate}
-                  min={startDate || new Date().toISOString().split('T')[0]} 
+                  min={startDate || todayStr} 
+                  max={maxFutureDateStr}
                   onChange={(e) => setEndDate(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white outline-none focus:border-emerald-500 transition-colors [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:brightness-0 [&::-webkit-calendar-picker-indicator]:saturate-100 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:sepia [&::-webkit-calendar-picker-indicator]:hue-rotate-[100deg]"
                 />

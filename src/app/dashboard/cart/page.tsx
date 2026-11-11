@@ -133,6 +133,32 @@ export default function CartPage() {
     await supabase.from('carts').update({ quantity: newQty }).eq('id', cartId)
   }
 
+  const handleDirectQuantityChange = async (cartId: string, val: string, maxStock: number) => {
+    if (val === '') {
+      setCartItems(prev => prev.map(item => item.id === cartId ? { ...item, quantity: '' } : item))
+      return
+    }
+
+    const parsed = parseInt(val, 10)
+    if (isNaN(parsed)) return
+
+    let clamped = parsed
+    if (clamped < 1) clamped = 1
+    if (clamped > maxStock) clamped = maxStock
+
+    setCartItems(prev => prev.map(item => item.id === cartId ? { ...item, quantity: clamped } : item))
+    await supabase.from('carts').update({ quantity: clamped }).eq('id', cartId)
+  }
+
+  const handleBlurQuantity = async (cartId: string, currentQty: any, maxStock: number) => {
+    let finalQty = typeof currentQty === 'number' ? currentQty : parseInt(currentQty, 10)
+    if (isNaN(finalQty) || finalQty < 1) finalQty = 1
+    if (finalQty > maxStock) finalQty = maxStock
+
+    setCartItems(prev => prev.map(item => item.id === cartId ? { ...item, quantity: finalQty } : item))
+    await supabase.from('carts').update({ quantity: finalQty }).eq('id', cartId)
+  }
+
   const openDetailModal = (itemData: any) => {
     setSelectedDetail(itemData)
     setIsDetailModalOpen(true)
@@ -141,7 +167,7 @@ export default function CartPage() {
   // Hitung total harga barang yang dicentang (default hitungan 1 hari)
   const selectedItems = cartItems.filter(item => selectedCartIds.includes(item.id))
   const totalPriceDefault1Day = selectedItems.reduce(
-    (total, cart) => total + (cart.items.price_per_day * cart.quantity), 
+    (total, cart) => total + (cart.items.price_per_day * (Number(cart.quantity) || 1)), 
     0
   )
 
@@ -244,15 +270,28 @@ export default function CartPage() {
                   <div className="flex flex-col items-center gap-1.5">
                     <div className="flex items-center bg-[#0a0a0a] rounded-lg border border-[#2e2e2e] overflow-hidden">
                       <button 
-                        onClick={() => handleUpdateQuantity(cart.id, cart.quantity, -1, cart.items.stock)}
+                        type="button"
+                        onClick={() => handleUpdateQuantity(cart.id, Number(cart.quantity) || 1, -1, cart.items.stock)}
                         className="px-3 py-1.5 text-gray-400 hover:text-white hover:bg-[#2e2e2e] transition-colors"
+                        title="Kurangi 1"
                       >
                         -
                       </button>
-                      <span className="w-8 text-center text-sm font-medium text-white">{cart.quantity}</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={cart.items.stock}
+                        value={cart.quantity}
+                        onChange={(e) => handleDirectQuantityChange(cart.id, e.target.value, cart.items.stock)}
+                        onBlur={() => handleBlurQuantity(cart.id, cart.quantity, cart.items.stock)}
+                        className="w-12 text-center text-sm font-semibold text-white bg-transparent outline-none border-x border-[#2e2e2e] py-1.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:bg-[#161616]"
+                        title="Jumlah sewa"
+                      />
                       <button 
-                        onClick={() => handleUpdateQuantity(cart.id, cart.quantity, 1, cart.items.stock)}
+                        type="button"
+                        onClick={() => handleUpdateQuantity(cart.id, Number(cart.quantity) || 1, 1, cart.items.stock)}
                         className="px-3 py-1.5 text-gray-400 hover:text-white hover:bg-[#2e2e2e] transition-colors"
+                        title="Tambah 1"
                       >
                         +
                       </button>

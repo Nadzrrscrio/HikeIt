@@ -27,8 +27,8 @@ export default function ResetPasswordPage() {
         return
       }
 
-      if (newPassword.length < 6) {
-        setError('Password minimal harus 6 karakter!')
+      if (newPassword.length < 6 || newPassword.length > 8) {
+        setError('Password baru harus antara 6 sampai 8 karakter!')
         return
       }
 
@@ -93,10 +93,12 @@ export default function ResetPasswordPage() {
                   id="new-password"
                   type={showPassword ? 'text' : 'password'}
                   required
+                  minLength={6}
+                  maxLength={8}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white placeholder-gray-600 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all text-sm"
-                  placeholder="Minimal 6 karakter"
+                  placeholder="Password baru (6 - 8 karakter)"
                 />
                 <button
                   type="button"
@@ -124,10 +126,12 @@ export default function ResetPasswordPage() {
                   id="confirm-password"
                   type={showPassword ? 'text' : 'password'}
                   required
+                  minLength={6}
+                  maxLength={8}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#2e2e2e] text-white placeholder-gray-600 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all text-sm"
-                  placeholder="Ulangi password baru"
+                  placeholder="Ulangi password baru (6 - 8 karakter)"
                 />
               </div>
             </div>
