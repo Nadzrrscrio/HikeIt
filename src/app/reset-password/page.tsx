@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -15,6 +15,32 @@ export default function ResetPasswordPage() {
 
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    // 1. Tangani pertukaran token bila tautan menggunakan alur PKCE (?code=...)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const code = params.get('code')
+      if (code) {
+        supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+          if (error) {
+            setError('Tautan reset password tidak valid atau sudah kedaluwarsa.')
+          }
+        })
+      }
+    }
+
+    // 2. Dengarkan event auth recovery
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setError(null)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [supabase.auth])
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()

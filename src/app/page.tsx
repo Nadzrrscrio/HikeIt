@@ -59,8 +59,8 @@ export default function LoginPage() {
     }
 
     try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hike-it.vercel.app'
-      const redirectUrl = `${siteUrl.replace(/\/$/, '')}/reset-password`
+      // Pastikan selalu mengarah ke halaman reset password di domain produksi Vercel
+      const redirectUrl = 'https://hike-it.vercel.app/reset-password'
       const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
         redirectTo: redirectUrl,
       })
