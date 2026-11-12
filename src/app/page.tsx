@@ -59,7 +59,8 @@ export default function LoginPage() {
     }
 
     try {
-      const redirectUrl = `${window.location.origin}/reset-password`
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hike-it.vercel.app'
+      const redirectUrl = `${siteUrl.replace(/\/$/, '')}/reset-password`
       const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
         redirectTo: redirectUrl,
       })
