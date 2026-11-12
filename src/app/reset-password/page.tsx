@@ -17,22 +17,49 @@ export default function ResetPasswordPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    // 1. Tangani pertukaran token bila tautan menggunakan alur PKCE (?code=...)
-    if (typeof window !== 'undefined') {
+    const handleAuthInit = async () => {
+      if (typeof window === 'undefined') return
+
       const params = new URLSearchParams(window.location.search)
+      const tokenHash = params.get('token_hash')
       const code = params.get('code')
-      if (code) {
-        supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-          if (error) {
-            setError('Tautan reset password tidak valid atau sudah kedaluwarsa.')
-          }
+
+      // 1. Alur Token Hash (Dapat dibuka di browser/perangkat mana saja tanpa kendala PKCE)
+      if (tokenHash) {
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: 'recovery',
         })
+        if (otpError) {
+          setError('Tautan reset password tidak valid atau sudah kedaluwarsa.')
+        } else {
+          setError(null)
+        }
+        return
+      }
+
+      // 2. Alur PKCE (?code=...)
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+        if (exchangeError) {
+          // Periksa apakah sesi pengguna sebenarnya sudah aktif
+          const { data: { session } } = await supabase.auth.getSession()
+          if (!session) {
+            setError(
+              'Tautan reset password tidak cocok dengan browser pemohon atau sudah pernah digunakan. Pastikan membuka tautan pada browser yang sama dengan saat meminta reset password.'
+            )
+          }
+        } else {
+          setError(null)
+        }
       }
     }
 
-    // 2. Dengarkan event auth recovery
+    handleAuthInit()
+
+    // 3. Dengarkan event auth recovery
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === 'PASSWORD_RECOVERY') {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
         setError(null)
       }
     })
